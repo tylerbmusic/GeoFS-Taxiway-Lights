@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.1
+// @version      0.2
 // @description  Adds a tool to add taxiway lights
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
@@ -14,6 +14,7 @@
     window.twLights = [];
     window.twPos = [];
     window.currLight;
+    window.errs = 0;
     /*window.lightDiv = document.createElement("div");
     window.lightDiv.style.position = "fixed";
     window.lightDiv.style.top = "20%";
@@ -44,14 +45,14 @@
 })();
 window.updateLights = async function() {
     if (window.geofs.cautiousWithTerrain == false) {
-        var renderDistance = 0.25; //Render distance, in degrees.
+        var renderDistance = 0.1; //Render distance, in degrees.
         var l0 = Math.floor(window.geofs.aircraft.instance.llaLocation[0]/renderDistance)*renderDistance;
         var l1 = Math.floor(window.geofs.aircraft.instance.llaLocation[1]/renderDistance)*renderDistance;
         var bounds = (l0) + ", " + (l1) + ", " + (l0+renderDistance) + ", " + (l1+renderDistance);
         if (!window.lastBounds || (window.lastBounds != bounds)) {
             //Remove existing lights
             for (var i = 0; i < window.twLights.length; i++) {
-            window.geofs.api.viewer.entities.remove(window.twLights[i]);
+                window.geofs.api.viewer.entities.remove(window.twLights[i]);
             }
             console.log("Lights removed, placing taxiway edge lights");
             //Place new lights
@@ -146,54 +147,7 @@ window.copyToClipboard = function(text) { //WARNING: This function (except this 
 
     console.log('Copied to clipboard:', text);
 }
-/*async function getTaxiwayDataEdgeless(bounds) {
-    const overpassUrl = 'https://overpass-api.de/api/interpreter';
-    const query = `
-        [out:json];
-        (
-            way["aeroway"="taxiway"]({{bbox}});
-        );
-        out body;
-        >;
-        out skel qt;
-    `;
-    const bbox = bounds;
-
-    try {
-        window.theNodes = [];
-        const response = await fetch(`${overpassUrl}?data=${encodeURIComponent(query.replace('{{bbox}}', bbox))}`);
-        const data = await response.json();
-
-        // Extract taxiway points
-        const taxiwayPoints = [];
-        const nodes = {};
-
-        data.elements.forEach(element => {
-            if (element.type === 'node') {
-                nodes[element.id] = element;
-            }
-        });
-
-        data.elements.forEach(element => {
-            if (element.type === 'way') {
-                const wayNodes = element.nodes.map(nodeId => {
-                    const node = nodes[nodeId];
-                    window.theNodes.push(node);
-                    if (node) {
-                        return [node.lon, node.lat, 0]; // Assuming ground level
-                    }
-                }).filter(Boolean);
-
-                taxiwayPoints.push(...wayNodes);
-            }
-        });
-
-        return taxiwayPoints;
-    } catch (error) {
-        console.error('Error fetching taxiway data:', error);
-    }
-}*/
-function calculateOffsetPoint(lon, lat, offsetDistance) {
+/*function calculateOffsetPoint(lon, lat, offsetDistance) {
     const R = 6378137; // Earth's radius in meters
 
     const dLat = offsetDistance / R;
@@ -206,88 +160,6 @@ function calculateOffsetPoint(lon, lat, offsetDistance) {
         latMinus: lat - dLat * 180 / Math.PI
     };
 }
-
-/*async function getTaxiwayData(bounds) {
-    const overpassUrl = 'https://overpass-api.de/api/interpreter';
-    const query = `
-        [out:json];
-        (
-            way["aeroway"="taxiway"]({{bbox}});
-        );
-        out body;
-        >;
-        out skel qt;
-    `;
-    const bbox = bounds;
-
-    try {
-        const response = await fetch(`${overpassUrl}?data=${encodeURIComponent(query.replace('{{bbox}}', bbox))}`);
-        const data = await response.json();
-
-        // Extract taxiway points
-        const taxiwayEdges = [];
-        const nodes = {};
-
-        // First, store all nodes in an object for easy lookup
-        data.elements.forEach(element => {
-            if (element.type === 'node') {
-                nodes[element.id] = element;
-            }
-        });
-
-        // Then, go through the ways and get their nodes
-        data.elements.forEach(element => {
-            if (element.type === 'way') {
-                const wayNodes = element.nodes.map(nodeId => {
-                    const node = nodes[nodeId];
-                    if (node) {
-                        return [node.lon, node.lat, 0]; // Assuming ground level
-                    }
-                }).filter(Boolean);
-
-                if (wayNodes.length > 0) {
-                    // Calculate edge points for each node
-                    const edgePoints = wayNodes.map(([lon, lat, alt]) => {
-                        const offset = 10; // 10 meters from the centerline
-                        const offsetPoints = calculateOffsetPoint(lon, lat, offset);
-                        return [
-                            [offsetPoints.lonPlus, offsetPoints.latPlus, alt],
-                            [offsetPoints.lonMinus, offsetPoints.latMinus, alt]
-                        ];
-                    });
-                    taxiwayEdges.push(edgePoints);
-                }
-            }
-        });
-
-        return taxiwayEdges;
-    } catch (error) {
-        console.error('Error fetching taxiway data:', error);
-    }
-}
-window.getTwD = async function(bounds) {
-    getTaxiwayData(bounds).then(tw => {
-        tw.forEach((edge, index) => {
-            for (var i = 0; i < edge.length; i++) {
-                for (var j = 0; j < edge[i].length; j++) {
-                        const epos = edge[i][j];
-                        const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
-                        const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
-                        window.twLights.push(
-                            window.geofs.api.viewer.entities.add({
-                                position: pos,
-                                billboard: {
-                                    image: "https://tylerbmusic.github.io/GPWS-files_geofs/bluelight.png",
-                                    scale: 0.07 * (1/window.geofs.api.renderingSettings.resolutionScale),
-                                },
-                            })
-                        );
-                    //}
-                }
-            }
-        });
-    });
-};*/
 function interpolatePoints(start, end, interval) {
     const [lon1, lat1] = start;
     const [lon2, lat2] = end;
@@ -373,7 +245,134 @@ async function getTaxiwayData(bounds) {
     } catch (error) {
         console.error('Error fetching taxiway data:', error);
     }
+}*/
+///
+
+// Helper function to calculate the bearing between two points.
+function calculateBearing(lon1, lat1, lon2, lat2) {
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const lat1Rad = lat1 * Math.PI / 180;
+    const lat2Rad = lat2 * Math.PI / 180;
+
+    const y = Math.sin(dLon) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+              Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+
+    const bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360; // Normalize to 0-360 degrees
 }
+
+// Function to calculate the offset points based on the bearing.
+function calculateOffsetPoint(lon, lat, bearing, offsetDistance) {
+    const R = 6378137; // Earth's radius in meters
+
+    // Convert bearing to radians
+    const bearingRad = (bearing + 90) * Math.PI / 180; // +90 to make it perpendicular
+
+    // Calculate offset in radians
+    const dLat = offsetDistance * Math.cos(bearingRad) / R;
+    const dLon = offsetDistance * Math.sin(bearingRad) / (R * Math.cos(Math.PI * lat / 180));
+
+    return {
+        lonPlus: lon + dLon * 180 / Math.PI,
+        latPlus: lat + dLat * 180 / Math.PI,
+        lonMinus: lon - dLon * 180 / Math.PI,
+        latMinus: lat - dLat * 180 / Math.PI
+    };
+}
+
+function interpolatePoints(start, end, interval) {
+    const [lon1, lat1] = start;
+    const [lon2, lat2] = end;
+
+    const distance = Math.sqrt(
+        Math.pow(lon2 - lon1, 2) + Math.pow(lat2 - lat1, 2)
+    );
+
+    const numPoints = Math.max(Math.floor(distance / interval), 1);
+    const interpolated = [];
+
+    for (let i = 0; i <= numPoints; i++) {
+        const ratio = i / numPoints;
+        const lon = lon1 + (lon2 - lon1) * ratio;
+        const lat = lat1 + (lat2 - lat1) * ratio;
+        interpolated.push([lon, lat, 0]);
+    }
+
+    return interpolated;
+}
+
+async function getTaxiwayData(bounds) {
+    const overpassUrl = 'https://overpass-api.de/api/interpreter';
+    const query = `
+        [out:json];
+        (
+            way["aeroway"="taxiway"]({{bbox}});
+        );
+        out body;
+        >;
+        out skel qt;
+    `;
+    const bbox = bounds;
+
+    try {
+        const response = await fetch(`${overpassUrl}?data=${encodeURIComponent(query.replace('{{bbox}}', bbox))}`);
+        const data = await response.json();
+
+        const taxiwayEdges = [];
+        const nodes = {};
+
+        data.elements.forEach(element => {
+            if (element.type === 'node') {
+                nodes[element.id] = element;
+            }
+        });
+
+        data.elements.forEach(element => {
+            if (element.type === 'way') {
+                const wayNodes = element.nodes.map(nodeId => {
+                    const node = nodes[nodeId];
+                    if (node) {
+                        return [node.lon, node.lat, 0];
+                    }
+                }).filter(Boolean);
+
+                if (wayNodes.length > 1) {
+                    const edgePoints = [];
+                    const interval = 0.0002 + ((Math.random()-0.5)*0.00005); // Adjust for desired spacing
+
+                    for (let i = 0; i < wayNodes.length - 1; i++) {
+                        const segmentPoints = interpolatePoints(wayNodes[i], wayNodes[i + 1], interval);
+                        const bearing = calculateBearing(
+                            wayNodes[i][0], wayNodes[i][1],
+                            wayNodes[i + 1][0], wayNodes[i + 1][1]
+                        );
+
+                        // Calculate edge points for each interpolated point
+                        const offset = 10; // 10 meters from centerline
+                        const interpolatedEdgePoints = segmentPoints.map(([lon, lat, alt]) => {
+                            const offsetPoints = calculateOffsetPoint(lon, lat, bearing, offset);
+                            return [
+                                [offsetPoints.lonPlus, offsetPoints.latPlus, alt],
+                                [offsetPoints.lonMinus, offsetPoints.latMinus, alt]
+                            ];
+                        });
+
+                        edgePoints.push(...interpolatedEdgePoints);
+                    }
+
+                    taxiwayEdges.push(edgePoints);
+                }
+            }
+        });
+
+        return taxiwayEdges;
+    } catch (error) {
+        console.error('Error fetching taxiway data:', error);
+    }
+}
+
+///
 async function getTaxiwayDataEdgeless(bounds) {
     const overpassUrl = 'https://overpass-api.de/api/interpreter';
     const query = `
@@ -410,7 +409,7 @@ async function getTaxiwayDataEdgeless(bounds) {
                 }).filter(Boolean);
 
                 if (wayNodes.length > 1) {
-                    const interval = 0.0002; // Adjust for desired spacing
+                    const interval = 0.00007 + ((Math.random()-0.5)*0.00002); // Semi-random spacing
 
                     for (let i = 0; i < wayNodes.length - 1; i++) {
                         const segmentPoints = interpolatePoints(wayNodes[i], wayNodes[i + 1], interval);
@@ -431,13 +430,25 @@ window.getTwD = async function(bounds) {
             edge.forEach(([plus, minus]) => {
                 [plus, minus].forEach(epos => {
                     const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
+                    apos[2] += 0.3556; //Offset 14 inches from the ground
                     const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
+                    if (pos[2] < 0) {
+                        window.errs++;
+                        pos[2] = 0 - pos[2];
+                    }
                     window.twLights.push(
                         window.geofs.api.viewer.entities.add({
                             position: pos,
                             billboard: {
                                 image: "https://tylerbmusic.github.io/GPWS-files_geofs/bluelight.png",
-                                scale: 0.05 * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                                scale: 0.07 * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                                scaleByDistance: { //May or may not work
+                                    "near": 1,
+                                    "nearValue": 1,
+                                    "far": 2000,
+                                    "farValue": 0.15
+                                },
+                                translucencyByDistance: new window.Cesium.NearFarScalar(10, 1.0, 10e3, 0.0)
                             },
                         })
                     );
@@ -451,13 +462,25 @@ window.getTwDE = async function(bounds) {
     getTaxiwayDataEdgeless(bounds).then(centerline => {
         centerline.forEach(epos => {
             const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
+            apos[2] += 0.3556; //Offset 14 inches from the ground
             const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
+            if (pos[2] < 0) {
+                window.errs++;
+                pos[2] = 0 - pos[2];
+            }
             window.twLights.push(
                 window.geofs.api.viewer.entities.add({
                     position: pos,
                     billboard: {
                         image: "https://tylerbmusic.github.io/GPWS-files_geofs/greenlight.png",
-                        scale: 0.07 * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                        scale: 0.05 * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                        scaleByDistance: {
+                            "near": 1,
+                            "nearValue": 1,
+                            "far": 2000,
+                            "farValue": 0.15
+                        },
+                        translucencyByDistance: new window.Cesium.NearFarScalar(10, 1.0, 10e3, 0.0)
                     },
                 })
             );
