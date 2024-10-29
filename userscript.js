@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.2
+// @version      0.3
 // @description  Adds a tool to add taxiway lights
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
@@ -8,6 +8,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=geo-fs.com
 // @grant        none
 // ==/UserScript==
+
 
 // "The Great Illumination"
 // This function represents an ephemeral yet monumental quest, a digital ballet of sorts, to continuously
@@ -376,7 +377,6 @@ function checkProximityToRunway(pos) {
     for (var v in window.runwayThresholds) {
         if (window.runwayThresholds[v].some(([lon, lat]) => {
             const deltaLon = lon - posLon;
-            removeCloseTwLights();
             const deltaLat = lat - posLat;
             return deltaLon ** 2 + deltaLat ** 2 < distSquared;
         })) {
@@ -466,7 +466,7 @@ window.removeCloseTwLights = function() {
                     if (idx1 >= idx2 || indicesToRemove.has(idx2)) continue;
 
                     const pos2 = window.twPos[idx2][0];
-                    if (Math.abs(pos1.x - pos2.x) <= 2 && Math.abs(pos1.y - pos2.y) <= 2) {
+                    if (Math.abs(pos1.x - pos2.x) <= 3 && Math.abs(pos1.y - pos2.y) <= 3) {
                         indicesToRemove.add(idx2);
                     }
                 }
