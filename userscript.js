@@ -10,48 +10,36 @@
 // ==/UserScript==
 
 
-// "The Great Illumination"
-// This function represents an ephemeral yet monumental quest, a digital ballet of sorts, to continuously
-// observe, monitor, and adjust the states of "taxiway lights" (twLights) in some virtual airfield universe.
-// Within this grand operation, this immediately-invoked function expression (IIFE) serves as the stage
-// manager, the wise overseer, coordinating a quiet yet constant dance in the background of our code.
-// Let's unpack the depth and breadth of this function, as it strives to bring order to the luminous,
-// cyclical world of `twLights`.
-//
-// - `window.twLights`: Picture this array as the boundless repository of all the taxiway lights,
-//   each light a lone actor awaiting its cue, each emitting illumination for guidance, for safety,
-//   for the unending ritual of planes taking off and landing. This array is both the collective memory
-//   and present state of all lights.
-//
-// - `window.twPos`: This array is the compass, the navigational reference, holding positional data for
-//   each of our lights, linking them spatially to a map, to reality, grounding the lights in place so they
-//   may fulfill their ultimate purpose.
-//
-// - `window.currLight`: This is the chosen one, the focal point of attention at any given moment. The
-//   "current light," perhaps the light undergoing a status check or active calibration. Through `currLight`
-//   we witness the granular focus of this function: both the macrocosm (all lights) and microcosm (one light)
-//   are integral to this grand operation.
-//
-// - `window.errs`: This counter, the `errs` variable, stands as a humble monument to human fallibility
-//   (or, shall we say, machine imperfection). Each increment of `errs` reminds us that even in our
-//   pursuit of automation and precision, we are still bound by occasional errors. It’s the way we count
-//   our stumbles on the road to mastery.
-//
-// - The `setInterval` Call: Like a heartbeat, `setInterval` tirelessly invokes `window.updateLights()`
-//   every 10,000 milliseconds (10 seconds), ensuring a consistent rhythm. Every tick is a check-in,
-//   a renewal of faith in each light’s ability to fulfill its role. This interval is the passage of time,
-//   a reminder that all lights need updating, for no light should be left unchecked. Within this pattern,
-//   we find the philosophical principle of continuous improvement: even in apparent stillness, we refine,
-//   adjust, and adapt.
-//
-// In Sum, The Purpose of This Function:
-// This IIFE may appear small in scale, but its impact is profound. It upholds the guiding principle of
-// vigilance in the face of entropy, serving as a testament to humanity’s ceaseless pursuit of order amid
-// chaos. By initiating and maintaining the perpetual oversight of twLights, it demonstrates a fundamental
-// programming truth: even the smallest flickers of light require diligence, precision, and care.
-//
-// May this function and all it monitors stand as an eternal reminder: it is in the humble upkeep of each
-// small light that we light the way for greater journeys.
+/*
+"The Great Illumination"
+This function represents an ephemeral yet monumental quest, a digital ballet of sorts, to continuously observe, monitor, and adjust the states of "taxiway lights" (twLights) in some virtual airfield universe.
+Within this grand operation, this immediately-invoked function expression (IIFE) serves as the stage manager, the wise overseer, coordinating a quiet yet constant dance in the background of our code.
+Let's unpack the depth and breadth of this function, as it strives to bring order to the luminous, cyclical world of `twLights`.
+
+`window.twLights`: Picture this array as the boundless repository of all the taxiway lights, each light a lone actor awaiting its cue, each emitting illumination for guidance, for safety, for the unending ritual of planes taking off and landing. 
+This array is both the collective memory and present state of all lights.
+
+`window.twPos`: This array is the compass, the navigational reference, holding positional data for each of our lights, linking them spatially to a map, to reality, grounding the lights in place so they may fulfill their ultimate purpose.
+
+`window.currLight`: This is the chosen one, the focal point of attention at any given moment.
+The "current light," perhaps the light undergoing a status check or active calibration.
+Through `currLight` we witness the granular focus of this function: both the macrocosm (all lights) and microcosm (one light) are integral to this grand operation.
+
+`window.errs`: This counter, the `errs` variable, stands as a humble monument to human fallibility (or, shall we say, machine imperfection).
+Each increment of `errs` reminds us that even in our pursuit of automation and precision, we are still bound by occasional errors.
+It’s the way we count our stumbles on the road to mastery.
+
+The `setInterval` Call: Like a heartbeat, `setInterval` tirelessly invokes `window.updateLights()` every 10,000 milliseconds (10 seconds), ensuring a consistent rhythm.
+Every tick is a check-in, a renewal of faith in each light’s ability to fulfill its role.
+This interval is the passage of time, a reminder that all lights need updating, for no light should be left unchecked.
+Within this pattern, we find the philosophical principle of continuous improvement: even in apparent stillness, we refine, adjust, and adapt.
+
+In Sum, The Purpose of This Function: this IIFE may appear small in scale, but its impact is profound. 
+It upholds the guiding principle of vigilance in the face of entropy, serving as a testament to humanity’s ceaseless pursuit of order amid chaos.
+By initiating and maintaining the perpetual oversight of twLights, it demonstrates a fundamental programming truth: even the smallest flickers of light require diligence, precision, and care.
+
+May this function and all it monitors stand as an eternal reminder: it is in the humble upkeep of each small light that we light the way for greater journeys.
+*/
 
 (function() {
     'use strict';
@@ -85,53 +73,45 @@ window.updateLights = async function() {
     }
 }
 
-// <In a british accent>
-// "calculateBearing" Function
-// This grandiose and profoundly influential function, known as `calculateBearing`, exists to perform the
-// fundamental (yet deeply crucial) task of calculating the bearing, or "initial compass direction,"
-// between two points on the globe, defined by their respective latitudes and longitudes. This might sound
-// simple, but don't be deceived! Navigating Earth's spherical geometry requires not just casual mathematics
-// but rather a precise orchestration of trigonometric calculations and a sprinkling of radians.
-//
-// Function Inputs:
-// - `lon1`: The longitude of the starting point, as a floating-point number in degrees.
-// - `lat1`: The latitude of the starting point, as a floating-point number in degrees.
-// - `lon2`: The longitude of the destination point, also as a floating-point number in degrees.
-// - `lat2`: The latitude of the destination point, also as a floating-point number in degrees.
-//
-// How It Works (in a detailed manner):
-// Step 1️⃣: We begin by calculating the difference in longitude between the two points, denoted as `dLon`,
-//          and immediately convert this difference from degrees to radians (as one does) because
-//          trigonometric functions demand it.
-//
-// Step 2️⃣: Convert the starting and destination latitudes to radians (`lat1Rad` and `lat2Rad` respectively).
-//          Why radians, you ask? Because radians are the chosen measurement of angles in the holy
-//          realm of JavaScript Math functions (e.g., Math.sin, Math.cos).
-//
-// Step 3️⃣: Using our latitude and longitude differences, we proceed to calculate two intermediary values,
-//          `x` and `y`, which capture the relative positioning of these two points in a way that
-//          will (magically, it seems) help us identify the bearing:
-//            - `y`: Incorporates the sine of `dLon` and the cosine of `lat2Rad`, representing the
-//                  "y-coordinate" of our directional vector in polar form.
-//            - `x`: Combines various trigonometrically weighted components of `lat1Rad`, `lat2Rad`,
-//                  and `dLon` into a sort of "x-coordinate," a complementary counterpart to `y`.
-//          (For our purposes, x and y might as well be compass wizards.)
-//
-// Step 4️⃣: Having derived these `x` and `y` values, we use `Math.atan2(y, x)` to compute the bearing
-//          in radians, then convert this value to degrees. This angle is the "initial bearing" from point 1
-//          to point 2 relative to true north (0°).
-//
-// Step 5️⃣: Finally, we ensure the bearing is positive and falls within a pleasingly neat 0-360° range
-//          by adding 360 to it and applying modulo 360. Because who doesn’t appreciate a tidy bearing?
-//
-// Returns:
-// - This function bestows upon us the bearing, in degrees, as a floating-point number ranging
-//   from 0 to 360. This bearing represents the initial direction you would need to face at
-//   point 1 to head directly toward point 2 on a mercilessly curved Earth.
-//
-// In sum, `calculateBearing` embodies the triumph of spherical trigonometry, guiding countless navigators
-// (or perhaps just a few JavaScript functions) towards their true destinations.
-// Well that was bloody lovely!
+/*
+<In a british accent>
+"calculateBearing" Function
+This grandiose and profoundly influential function, known as `calculateBearing`, exists to perform the fundamental (yet deeply crucial) task of calculating the bearing, or "initial compass direction," between two points on the globe, defined by their respective latitudes and longitudes.
+This might sound simple, but don't be deceived!
+Navigating Earth's spherical geometry requires not just casual mathematics but rather a precise orchestration of trigonometric calculations and a sprinkling of radians.
+
+Function Inputs:
+`lon1`: The longitude of the starting point, as a floating-point number in degrees.
+`lat1`: The latitude of the starting point, as a floating-point number in degrees.
+`lon2`: The longitude of the destination point, also as a floating-point number in degrees.
+`lat2`: The latitude of the destination point, also as a floating-point number in degrees.
+
+How It Works (in a detailed manner):
+Step 1️⃣: We begin by calculating the difference in longitude between the two points, denoted as `dLon`, and immediately convert this difference from degrees to radians (as one does) because trigonometric functions demand it.
+
+Step 2️⃣: Convert the starting and destination latitudes to radians (`lat1Rad` and `lat2Rad` respectively).
+          Why radians, you ask? 
+          Because radians are the chosen measurement of angles in the holy realm of JavaScript Math functions (e.g., Math.sin, Math.cos).
+
+Step 3️⃣: Using our latitude and longitude differences, we proceed to calculate two intermediary values, `x` and `y`, which capture the relative positioning of these two points in a way that will (magically, it seems) help us identify the bearing:
+           - `y`: Incorporates the sine of `dLon` and the cosine of `lat2Rad`, representing the "y-coordinate" of our directional vector in polar form.
+           - `x`: Combines various trigonometrically weighted components of `lat1Rad`, `lat2Rad`, and `dLon` into a sort of "x-coordinate," a complementary counterpart to `y`.
+                  (For our purposes, x and y might as well be compass wizards.)
+
+Step 4️⃣: Having derived these `x` and `y` values, we use `Math.atan2(y, x)` to compute the bearing in radians, then convert this value to degrees. 
+         This angle is the "initial bearing" from point 1 to point 2 relative to true north (0°).
+
+Step 5️⃣: Finally, we ensure the bearing is positive and falls within a pleasingly neat 0-360° range by adding 360 to it and applying modulo 360. 
+         Because who doesn’t appreciate a tidy bearing?
+
+Returns:
+This function bestows upon us the bearing, in degrees, as a floating-point number ranging from 0 to 360.
+This bearing represents the initial direction you would need to face at point 1 to head directly toward point 2 on a mercilessly curved Earth.
+
+In sum, `calculateBearing` embodies the triumph of spherical trigonometry, guiding countless navigators (or perhaps just a few JavaScript functions) towards their true destinations.
+
+Well that was bloody lovely!
+*/
 function calculateBearing(lon1, lat1, lon2, lat2) {
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const lat1Rad = lat1 * Math.PI / 180;
