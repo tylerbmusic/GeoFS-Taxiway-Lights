@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.6
+// @version      0.6.1
 // @description  Adds a tool to add taxiway lights
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
@@ -35,7 +35,7 @@
             .then(response => response.text())
             .then(script => {eval(script);})
         .then(() => {setTimeout(afterGMenu, 100);});
-    }
+    } else afterGMenu()
     function afterGMenu() {
         const twLM = new window.GMenu("Taxiway Lights", "twL");
         twLM.addItem("Render distance (degrees): ", "RenderDist", "number", 0, '0.05');
