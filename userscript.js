@@ -1,19 +1,25 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.6.1
+// @version      0.7
 // @description  Adds a tool to add taxiway lights
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
 // @match        https://*.geo-fs.com/geofs.php*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=geo-fs.com
 // @grant        none
+// @downloadURL  https://github.com/tylerbmusic/GeoFS-Taxiway-Lights/raw/refs/heads/main/userscript.js
+// @updateURL    https://github.com/tylerbmusic/GeoFS-Taxiway-Lights/raw/refs/heads/main/userscript.js
 // ==/UserScript==
 (function() {
     'use strict';
     window.twLights = [];
-    window.twPos = [];
-    window.currLight;
     window.errs = 0;
+    window.twLC = {
+        oldChunks: [],
+        newChunks: [],
+        toAdd: [],
+        toRemove: []
+    };
     /*if (localStorage.getItem("twLEnabled") == null) {
         localStorage.setItem("twLEnabled", 'true');
     }
@@ -34,7 +40,7 @@
         fetch('https://raw.githubusercontent.com/tylerbmusic/GeoFS-Addon-Menu/refs/heads/main/addonMenu.js')
             .then(response => response.text())
             .then(script => {eval(script);})
-        .then(() => {setTimeout(afterGMenu, 100);});
+            .then(() => {setTimeout(afterGMenu, 100);});
     } else afterGMenu()
     function afterGMenu() {
         const twLM = new window.GMenu("Taxiway Lights", "twL");
@@ -46,6 +52,9 @@
         setTimeout(() => {window.updateLights();}, 100*Number(localStorage.getItem("twLUpdateInterval")));
     }
 })();
+function fpe(num) {
+    return Number(num.toFixed(3));
+}
 
 window.updateLights = async function() {
     if (window.geofs.cautiousWithTerrain == false && (localStorage.getItem("twLEnabled") == 'true')) { //timeRatio is basically how bright the terrain should be--at noon it's 0, at midnight it's 1
@@ -53,26 +62,63 @@ window.updateLights = async function() {
         var l0 = Math.floor(window.geofs.aircraft.instance.llaLocation[0]/renderDistance)*renderDistance;
         var l1 = Math.floor(window.geofs.aircraft.instance.llaLocation[1]/renderDistance)*renderDistance;
         var bounds = (l0) + ", " + (l1) + ", " + (l0+renderDistance) + ", " + (l1+renderDistance);
-        if (!window.lastBounds || (window.lastBounds != bounds)) {
-            //Remove existing lights
-            for (let i = 0; i < window.twLights.length; i++) {
-                window.geofs.api.viewer.entities.remove(window.twLights[i]);
+        let chunkSize = 0.04;
+        let renderDist = 3;
+        function chunkTick() {
+            //Chunks creation
+            let lla = window.geofs.aircraft.instance.llaLocation;
+            window.twLC.newChunks = [];
+            for (let v = -renderDist; v <= renderDist; v++) {
+                let arr = [];
+                for (let h = -renderDist; h <= renderDist; h++) {
+                    arr.push({min: [fpe(Math.floor(lla[0]/chunkSize)*chunkSize + v*chunkSize), fpe(Math.floor(lla[1]/chunkSize)*chunkSize + h*chunkSize)], max: [fpe(Math.floor(lla[0]/chunkSize)*chunkSize + (v+1)*chunkSize), fpe(Math.floor(lla[1]/chunkSize)*chunkSize + (h+1)*chunkSize)]});
+                }
+                window.twLC.newChunks.push(arr);
             }
-            window.twLights = [];
-            console.log("Lights removed, placing taxiway edge lights");
-            //Place new lights
-            window.getTwD(bounds); //getTaxiwayData
-            console.log("Placing taxiway centerline lights");
-            window.getTwDE(bounds); //getTaxiwayDataEdgeless
-            //setTimeout(() => {window.removeCloseTwLights();}, 6000);
+            //Testing new/old chunks
+            if (JSON.stringify(window.twLC.newChunks) == JSON.stringify(window.twLC.oldChunks)) {
+                return;
+            }
+            window.twLC.toAdd = [];
+            window.twLC.toRemove = [];
+            //To Add
+            for (let a = 0; a < window.twLC.newChunks.length; a++) {
+                for (let b = 0; b < window.twLC.newChunks.length; b++) {
+                    if (JSON.stringify(window.twLC.oldChunks).indexOf(JSON.stringify(window.twLC.newChunks[a][b])) == -1) { //If it hadn't existed before, it's new
+                        window.twLC.toAdd.push([a,b]);
+                    }
+                    if ((window.twLC.oldChunks[a] && window.twLC.oldChunks[a][b]) && JSON.stringify(window.twLC.newChunks).indexOf(JSON.stringify(window.twLC.oldChunks[a][b])) == -1) { //If it doesn't exist anymore, it's old
+                        window.twLC.toRemove.push([a,b]);
+                    }
+                }
+            }
+            for (let f in window.twLC.toRemove) {
+                let bds = window.twLC.oldChunks[window.twLC.toRemove[f][0]][window.twLC.toRemove[f][1]];
+                let bound = `${fpe(bds.min[0])}, ${fpe(bds.min[1])}, ${fpe(bds.max[0])}, ${fpe(bds.max[1])}`;
+                for (let l in window.twLights[bound]) {
+                    window.geofs.api.viewer.entities.remove(window.twLights[bound][l]);
+                }
+                delete window.twLights[bound];
+            }
+            for (let e in window.twLC.toAdd) {
+                console.log("adding " + e);
+                let bds = window.twLC.newChunks[window.twLC.toAdd[e][0]][window.twLC.toAdd[e][1]]; //bounds, no formatting
+                let bound = `${fpe(bds.min[0])}, ${fpe(bds.min[1])}, ${fpe(bds.max[0])}, ${fpe(bds.max[1])}`;
+                if (e == 45) {
+                    console.log([window.twLC.newChunks, window.twLC.oldChunks]);
+                }
+                window.getTwD(bound, bound); //getTaxiwayData
+                window.getTwDE(bound, bound); //getTaxiwayDataEdgeless
+            }
+            window.twLC.oldChunks = window.twLC.newChunks;
         }
-        window.lastBounds = bounds;
+        chunkTick();
     } else if ((localStorage.getItem("twLEnabled") != 'true')) {
         window.lastBounds = "";
-        for (let i = 0; i < window.twLights.length; i++) {
-            window.geofs.api.viewer.entities.remove(window.twLights[i]);
-        }
-        window.twLights = [];
+        //for (let i in window.twLights) {
+        //    window.geofs.api.viewer.entities.remove(window.twLights[i]);
+        //}
+        //window.twLights = [];
         //console.log("It's either daytime or the taxiway lights aren't enabled, lights are off");
     }
     setTimeout(() => {window.updateLights();}, 1000*Number(localStorage.getItem("twLUpdateInterval")));
@@ -132,11 +178,11 @@ function interpolatePoints(start, end, interval) {
 }
 
 async function getTaxiwayData(bounds) {
-    const overpassUrl = 'https://overpass-api.de/api/interpreter';
+    const overpassUrl = 'https://overpass.private.coffee/api/interpreter';
     const query = `
         [out:json];
         (
-            way["aeroway"="taxiway"]({{bbox}});
+            way["aeroway"="taxiway"]({{bbox}})[ref];
         );
         out body;
         >;
@@ -203,7 +249,7 @@ async function getTaxiwayData(bounds) {
 
 ///
 async function getTaxiwayDataEdgeless(bounds) {
-    const overpassUrl = 'https://overpass-api.de/api/interpreter';
+    const overpassUrl = 'https://overpass.private.coffee/api/interpreter';
     const query = `
         [out:json];
         (
@@ -253,7 +299,7 @@ async function getTaxiwayDataEdgeless(bounds) {
         console.error('Error fetching taxiway data:', error);
     }
 }
-window.getTwD = async function(bounds) {
+window.getTwD = async function(bounds, id) {
     getTaxiwayData(bounds).then(edges => {
         edges.forEach(edge => {
             edge.forEach(([plus, minus]) => {
@@ -265,7 +311,10 @@ window.getTwD = async function(bounds) {
                         window.errs++;
                         pos[2] = 0 - pos[2];
                     }
-                    window.twLights.push(
+                    if (!window.twLights[id]) {
+                        window.twLights[id] = [];
+                    }
+                    window.twLights[id].push(
                         window.geofs.api.viewer.entities.add({
                             position: pos,
                             billboard: {
@@ -275,32 +324,16 @@ window.getTwD = async function(bounds) {
                                     "near": 1,
                                     "nearValue": 0.5,
                                     "far": 1500,
-                                    "farValue": 0.15
+                                    "farValue": 0.2
                                 },
-                                translucencyByDistance: new window.Cesium.NearFarScalar(10, 1.0, 10e3, 0.0)
+                                translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
                             },
-                        })
-                    );
+                        }));
                 });
             });
         });
     });
 };
-/*function checkProximityToRunway(pos) { //Where pos = [longitude, latitude] or [longitude, latitude, altitude]
-    window.conTestPos = pos;
-    var l0 = window.geofs.runways.getNearestRunway([pos[1], pos[0], 10]).threshold1;
-    var l1 = window.geofs.runways.getNearestRunway([pos[1], pos[0], 10]).threshold2;
-    if (!window.pLoc) {
-        window.pLoc = interpolatePoints([l0[1], l0[0]], [l1[1], l1[0]], 5/111000);
-    }
-    var dist = 20/111000;
-    for (var i = 0; i < window.pLoc.length; i++) {
-        if ((Math.abs(window.pLoc[i][0]-pos[0]) < dist) && (Math.abs(window.pLoc[i][1]-pos[1]) < dist)) {
-            return true;
-        }
-    }
-    return false;
-}*/
 
 ///
 function checkProximityToRunway(pos) {
@@ -333,7 +366,7 @@ function checkProximityToRunway(pos) {
 }
 ///
 
-window.getTwDE = async function(bounds) {
+window.getTwDE = async function(bounds, id) {
     getTaxiwayDataEdgeless(bounds).then(centerline => {
         var z = 0;
         centerline.forEach(epos => {
@@ -352,8 +385,10 @@ window.getTwDE = async function(bounds) {
                 window.errs++;
                 pos[2] = 0 - pos[2];
             }
-            window.twPos.push([pos, window.twLights.length]);
-            window.twLights.push(
+            if (!window.twLights[id]) {
+                window.twLights[id] = [];
+            }
+            window.twLights[id].push(
                 window.geofs.api.viewer.entities.add({
                     position: pos,
                     billboard: {
@@ -361,72 +396,13 @@ window.getTwDE = async function(bounds) {
                         scale: Number(localStorage.getItem("twLGSize")) * (1 / window.geofs.api.renderingSettings.resolutionScale),
                         scaleByDistance: {
                             "near": 1,
-                            "nearValue": 1,
+                            "nearValue": 0.5,
                             "far": 2000,
-                            "farValue": 0.15
+                            "farValue": 0.2
                         },
-                        translucencyByDistance: new window.Cesium.NearFarScalar(10, 1.0, 10e3, 0.0)
+                        translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
                     },
-                })
-            );
+                }));
         });
     });
-};
-
-window.removeCloseTwLights = function() {
-    const grid = {};
-    const gridSize = 2; // Cell size in meters, matches the distance threshold
-    const indicesToRemove = new Set();
-
-    // Helper function to compute grid cell based on coordinates
-    const getGridKey = (x, y) => `${Math.floor(x / gridSize)}_${Math.floor(y / gridSize)}`;
-
-    // Populate the grid with taxiway light positions
-    for (let i = 0; i < window.twPos.length; i++) {
-        const pos = window.twPos[i][0];
-        const gridKey = getGridKey(pos.x, pos.y);
-
-        if (!grid[gridKey]) grid[gridKey] = [];
-        grid[gridKey].push(i);
-    }
-
-    // Check for close taxiway lights within each cell and neighboring cells
-    for (const key in grid) {
-        const [xKey, yKey] = key.split('_').map(Number);
-        const cellsToCheck = [
-            `${xKey}_${yKey}`,
-            `${xKey + 1}_${yKey}`, `${xKey - 1}_${yKey}`,
-            `${xKey}_${yKey + 1}`, `${xKey}_${yKey - 1}`,
-            `${xKey + 1}_${yKey + 1}`, `${xKey - 1}_${yKey - 1}`,
-            `${xKey + 1}_${yKey - 1}`, `${xKey - 1}_${yKey + 1}`
-        ];
-
-        for (const cell of cellsToCheck) {
-            if (!grid[cell]) continue;
-
-            for (let i = 0; i < grid[key].length; i++) {
-                const idx1 = grid[key][i];
-                const pos1 = window.twPos[idx1][0];
-
-                for (const idx2 of grid[cell]) {
-                    if (idx1 >= idx2 || indicesToRemove.has(idx2)) continue;
-
-                    const pos2 = window.twPos[idx2][0];
-                    if (Math.abs(pos1.x - pos2.x) <= 3 && Math.abs(pos1.y - pos2.y) <= 3) {
-                        indicesToRemove.add(idx2);
-                    }
-                }
-            }
-        }
-    }
-
-    // Remove marked taxiway lights
-    const sortedIndices = Array.from(indicesToRemove).sort((a, b) => b - a);
-    for (const index of sortedIndices) {
-        window.geofs.api.viewer.entities.remove(window.twLights[index]);
-        window.twPos.splice(index, 1);
-        window.twLights.splice(index, 1);
-    }
-
-    console.log(`${sortedIndices.length} taxiway lights removed.`);
 };
