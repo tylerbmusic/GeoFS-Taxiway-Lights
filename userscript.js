@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.7
+// @version      0.7.1
 // @description  Adds a tool to add taxiway lights
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
@@ -42,7 +42,7 @@
             .then(script => {eval(script);})
             .then(() => {setTimeout(afterGMenu, 100);});
     } else afterGMenu()
-    function afterGMenu() {
+    async function afterGMenu() {
         const twLM = new window.GMenu("Taxiway Lights", "twL");
         twLM.addItem("Render distance (degrees): ", "RenderDist", "number", 0, '0.05');
         twLM.addItem("Update Interval (seconds): ", "UpdateInterval", "number", 0, '5');
@@ -50,6 +50,40 @@
         twLM.addItem("Blue Light Size: ", "BSize", "number", 0, "0.07");
         console.log("TwL Enabled? " + localStorage.getItem("twLEnabled"));
         setTimeout(() => {window.updateLights();}, 100*Number(localStorage.getItem("twLUpdateInterval")));
+        //ANONYMOUS TRACKING VIA CLOUDFLARE (I will never sell your data.)
+        //What's being tracked: For each script, how many hits (page loads) it's had in the last 24 hours, how many total hits in the last 30 days, and how many unique users there are.
+        //Why it's being tracked: I am curious to know how many people are using my addons.
+        //To see the data, go to https://track.tylerbialowas-bard.workers.dev in a web browser.
+
+        if (true) { //To opt out of anonymous tracking, change the word "true" in this line to "false".
+            const SCRIPT_NAME = "Taxiway_Lights";
+
+            // Generate persistent ID
+            let userId = localStorage.getItem("myScriptUserId");
+
+            if (!userId) {
+                userId = crypto.randomUUID();
+                localStorage.setItem("myScriptUserId", userId);
+            }
+            try {
+                const response = await fetch("https://track.tylerbialowas-bard.workers.dev", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        script: SCRIPT_NAME,
+                        userId: userId
+                    }),
+                });
+
+                if (response.ok) {
+                    console.log("Analytics event sent successfully");
+                }
+            } catch (error) {
+                console.error("Failed to track event:", error);
+            }
+        }
     }
 })();
 function fpe(num) {
