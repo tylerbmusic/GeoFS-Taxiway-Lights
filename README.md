@@ -26,5 +26,4 @@ Centerline lights turn yellow when near runways to help identify runway intersec
 
 ### Will this script impact the performace?
 The script is optimized to remove lights that are no longer in your vicinity and to avoid placing lights too close together. However, performance may vary depending on your computer's specs.
-
-![image](https://github.com/user-attachments/assets/c524e9a3-f1eb-4675-8e1e-c32749c901e2)
+**When you load/reload GeoFS, or when changing locations, it may take up to 3 minutes for all taxiway lights to render.**
