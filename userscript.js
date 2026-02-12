@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.7.1
-// @description  Adds a tool to add taxiway lights
+// @version      0.8
+// @description  Adds taxiway lights using OSM data (https://www.openstreetmap.org/copyright)
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
 // @match        https://*.geo-fs.com/geofs.php*
@@ -50,6 +50,25 @@
         twLM.addItem("Blue Light Size: ", "BSize", "number", 0, "0.07");
         console.log("TwL Enabled? " + localStorage.getItem("twLEnabled"));
         setTimeout(() => {window.updateLights();}, 100*Number(localStorage.getItem("twLUpdateInterval")));
+        //Update notification
+        async function checkForUpdates() {
+            let NAME = "Taxiway-Lights";
+            let SPACEDNAME = "Taxiway Lights";
+            let VERSION = "0.8";
+            let URL = "https://github.com/tylerbmusic/GeoFS-Taxiway-Lights";
+            let a = await fetch('https://tylerbmusic.github.io/versions.json')
+            let b = await a.text();
+            let newversion = JSON.parse(b)[NAME];
+            if (newversion !== VERSION && localStorage.getItem("twLStopU" + newversion) !== "true") {
+                if (confirm(`A new update for ${SPACEDNAME} is available at ${URL}\nCurrent version: v${VERSION}; New version: v${newversion}\nPress "OK" to copy URL, or "Cancel" to skip this update.`)) {
+                    await navigator.clipboard.writeText(URL);
+                    console.log("COPIED " + URL + " TO CLIPBOARD");
+                } else {
+                    localStorage.setItem("twLStopU" + newversion, true);
+                }
+            }
+        }
+        checkForUpdates();
         //ANONYMOUS TRACKING VIA CLOUDFLARE (I will never sell your data.)
         //What's being tracked: For each script, how many hits (page loads) it's had in the last 24 hours, how many total hits in the last 30 days, and how many unique users there are.
         //Why it's being tracked: I am curious to know how many people are using my addons.
@@ -134,7 +153,10 @@ window.updateLights = async function() {
                 }
                 delete window.twLights[bound];
             }
-            for (let e in window.twLC.toAdd) {
+            function addTheStuff(e) {
+                if (e == window.twLC.length) {
+                    return;
+                }
                 console.log("adding " + e);
                 let bds = window.twLC.newChunks[window.twLC.toAdd[e][0]][window.twLC.toAdd[e][1]]; //bounds, no formatting
                 let bound = `${fpe(bds.min[0])}, ${fpe(bds.min[1])}, ${fpe(bds.max[0])}, ${fpe(bds.max[1])}`;
@@ -142,8 +164,10 @@ window.updateLights = async function() {
                     console.log([window.twLC.newChunks, window.twLC.oldChunks]);
                 }
                 window.getTwD(bound, bound); //getTaxiwayData
-                window.getTwDE(bound, bound); //getTaxiwayDataEdgeless
+                setTimeout(() => {window.getTwDE(bound, bound)}, 150); //getTaxiwayDataEdgeless
+                setTimeout(() => {addTheStuff(e+1)},300); //Private.coffee doesn't want more than 10 requests per second; I added this to give some time between requests.
             }
+            addTheStuff(0);
             window.twLC.oldChunks = window.twLC.newChunks;
         }
         chunkTick();
@@ -225,7 +249,15 @@ async function getTaxiwayData(bounds) {
     const bbox = bounds;
 
     try {
-        const response = await fetch(`${overpassUrl}?data=${encodeURIComponent(query.replace('{{bbox}}', bbox))}`);
+        const response = await fetch(overpassUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Project-Name": "GeoFS Taxiway Lights",
+                "From": "https://tylerbmusic.github.io/contact"
+            },
+            body: "data=" + encodeURIComponent(query.replace('{{bbox}}', bbox))
+        });
         const data = await response.json();
 
         const taxiwayEdges = [];
@@ -296,7 +328,15 @@ async function getTaxiwayDataEdgeless(bounds) {
     const bbox = bounds;
 
     try {
-        const response = await fetch(`${overpassUrl}?data=${encodeURIComponent(query.replace('{{bbox}}', bbox))}`);
+        const response = await fetch(overpassUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Project-Name": "GeoFS Taxiway Lights",
+                "From": "https://tylerbmusic.github.io/contact"
+            },
+            body: "data=" + encodeURIComponent(query.replace('{{bbox}}', bbox))
+        });
         const data = await response.json();
 
         const centerlinePoints = [];
@@ -335,37 +375,39 @@ async function getTaxiwayDataEdgeless(bounds) {
 }
 window.getTwD = async function(bounds, id) {
     getTaxiwayData(bounds).then(edges => {
-        edges.forEach(edge => {
-            edge.forEach(([plus, minus]) => {
-                [plus, minus].forEach(epos => {
-                    const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
-                    apos[2] += 0.3556; //Offset 14 inches from the ground
-                    const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
-                    if (pos[2] < 0) {
-                        window.errs++;
-                        pos[2] = 0 - pos[2];
-                    }
-                    if (!window.twLights[id]) {
-                        window.twLights[id] = [];
-                    }
-                    window.twLights[id].push(
-                        window.geofs.api.viewer.entities.add({
-                            position: pos,
-                            billboard: {
-                                image: "https://tylerbmusic.github.io/GPWS-files_geofs/bluelight.png",
-                                scale: Number(localStorage.getItem("twLBSize")) * (1 / window.geofs.api.renderingSettings.resolutionScale),
-                                scaleByDistance: { //May or may not work
-                                    "near": 1,
-                                    "nearValue": 0.5,
-                                    "far": 1500,
-                                    "farValue": 0.2
+        if (edges && edges.length && edges.length > 0) {
+            edges.forEach(edge => {
+                edge.forEach(([plus, minus]) => {
+                    [plus, minus].forEach(epos => {
+                        const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
+                        apos[2] += 0.3556; //Offset 14 inches from the ground
+                        const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
+                        if (pos[2] < 0) {
+                            window.errs++;
+                            pos[2] = 0 - pos[2];
+                        }
+                        if (!window.twLights[id]) {
+                            window.twLights[id] = [];
+                        }
+                        window.twLights[id].push(
+                            window.geofs.api.viewer.entities.add({
+                                position: pos,
+                                billboard: {
+                                    image: "https://tylerbmusic.github.io/GPWS-files_geofs/bluelight.png",
+                                    scale: Number(localStorage.getItem("twLBSize")) * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                                    scaleByDistance: { //May or may not work
+                                        "near": 1,
+                                        "nearValue": 0.5,
+                                        "far": 1500,
+                                        "farValue": 0.2
+                                    },
+                                    translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
                                 },
-                                translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
-                            },
-                        }));
+                            }));
+                    });
                 });
             });
-        });
+        }
     });
 };
 
@@ -403,40 +445,43 @@ function checkProximityToRunway(pos) {
 window.getTwDE = async function(bounds, id) {
     getTaxiwayDataEdgeless(bounds).then(centerline => {
         var z = 0;
-        centerline.forEach(epos => {
-            z++;
-            const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
-            apos[2] += 0.3556; //Offset 14 inches from the ground
-            const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
+        if (centerline && centerline.length && centerline.length > 0) {
+            centerline.forEach(epos => {
+                z++;
+                const apos = window.geofs.getGroundAltitude([epos[1], epos[0], epos[2]]).location;
+                apos[2] += 0.3556; //Offset 14 inches from the ground
+                const pos = window.Cesium.Cartesian3.fromDegrees(apos[1], apos[0], apos[2]);
 
-            // Calculate distance to runway and set light color accordingly
-            const isNearRunway = checkProximityToRunway(epos); // Calculate proximity
-            const lightImage = (z%2 == 0 && isNearRunway) ?
-                  "https://tylerbmusic.github.io/GPWS-files_geofs/yellowlight.png" :
-            "https://tylerbmusic.github.io/GPWS-files_geofs/greenlight.png";
+                // Calculate distance to runway and set light color accordingly
+                const isNearRunway = checkProximityToRunway(epos); // Calculate proximity
+                const lightImage = (z%2 == 0 && isNearRunway) ?
+                      "https://tylerbmusic.github.io/GPWS-files_geofs/yellowlight.png" :
+                "https://tylerbmusic.github.io/GPWS-files_geofs/greenlight.png";
 
-            if (pos[2] < 0) {
-                window.errs++;
-                pos[2] = 0 - pos[2];
-            }
-            if (!window.twLights[id]) {
-                window.twLights[id] = [];
-            }
-            window.twLights[id].push(
-                window.geofs.api.viewer.entities.add({
-                    position: pos,
-                    billboard: {
-                        image: lightImage,
-                        scale: Number(localStorage.getItem("twLGSize")) * (1 / window.geofs.api.renderingSettings.resolutionScale),
-                        scaleByDistance: {
-                            "near": 1,
-                            "nearValue": 0.5,
-                            "far": 2000,
-                            "farValue": 0.2
+                if (pos[2] < 0) {
+                    window.errs++;
+                    pos[2] = 0 - pos[2];
+                }
+                if (!window.twLights[id]) {
+                    window.twLights[id] = [];
+                }
+                window.twLights[id].push(
+                    window.geofs.api.viewer.entities.add({
+                        position: pos,
+                        billboard: {
+                            image: lightImage,
+                            scale: Number(localStorage.getItem("twLGSize")) * (1 / window.geofs.api.renderingSettings.resolutionScale),
+                            scaleByDistance: {
+                                "near": 1,
+                                "nearValue": 0.5,
+                                "far": 2000,
+                                "farValue": 0.2
+                            },
+                            translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
                         },
-                        translucencyByDistance: new window.Cesium.NearFarScalar(10, 0.6, 10e3, 0.1)
-                    },
-                }));
-        });
+                    })
+                );
+            });
+        }
     });
 };
