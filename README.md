@@ -25,5 +25,5 @@ The script takes taxiway data from OpenStreetMap based on your location in game.
 Centerline lights turn yellow when near runways to help identify runway intersections more easily.
 
 ### Will this script impact the performace?
-The script is optimized to remove lights that are no longer in your vicinity and to avoid placing lights too close together. However, performance may vary depending on your computer's specs.
-**When you load/reload GeoFS, or when changing locations, it may take up to 3 minutes for all taxiway lights to render.**
+The script is optimized to remove lights that are no longer in your vicinity and to avoid placing lights too close together. However, performance may vary depending on your computer's specs.  
+**Note: When you load/reload GeoFS, or when changing locations, it may take up to 3 minutes for all taxiway lights to render.**
