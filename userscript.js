@@ -41,7 +41,7 @@
             let VERSION = "0.8.1";
             let LSNAME = "twL";
             let URL = "https://github.com/tylerbmusic/GeoFS-Taxiway-Lights";
-            let a = await fetch('https://tylerbmusic.github.io/versions.json')
+            let a = await fetch('https://tylerbmusic.github.io/versions.json?t=' + Date.now());
             let b = await a.text();
             let newversion = JSON.parse(b)[NAME];
             if (localStorage.getItem(LSNAME + "U" + VERSION) !== "true") { //Send an event upon updating (update data not available to the public)
