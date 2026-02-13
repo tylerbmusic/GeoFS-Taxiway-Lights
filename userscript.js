@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Taxiway Lights
-// @version      0.8
+// @version      0.8.1
 // @description  Adds taxiway lights using OSM data (https://www.openstreetmap.org/copyright)
 // @author       GGamerGGuy
 // @match        https://geo-fs.com/geofs.php*
@@ -20,21 +20,6 @@
         toAdd: [],
         toRemove: []
     };
-    /*if (localStorage.getItem("twLEnabled") == null) {
-        localStorage.setItem("twLEnabled", 'true');
-    }
-    if (localStorage.getItem("twLRenderDist") == null) {
-        localStorage.setItem("twLRenderDist", '0.05');
-    }
-    if (localStorage.getItem("twLUpdateInterval") == null) {
-        localStorage.setItem("twLUpdateInterval", "5");
-    }
-    if (localStorage.getItem("twLGSize") == null) {
-        localStorage.setItem("twLGSize", "0.05");
-    }
-    if (localStorage.getItem("twLBSize") == null) {
-        localStorage.setItem('twLBSize', "0.07");
-    }*/
     if (!window.gmenu || !window.GMenu) {
         console.log("Taxiway Lights getting GMenu");
         fetch('https://raw.githubusercontent.com/tylerbmusic/GeoFS-Addon-Menu/refs/heads/main/addonMenu.js')
@@ -44,7 +29,6 @@
     } else afterGMenu()
     async function afterGMenu() {
         const twLM = new window.GMenu("Taxiway Lights", "twL");
-        twLM.addItem("Render distance (degrees): ", "RenderDist", "number", 0, '0.05');
         twLM.addItem("Update Interval (seconds): ", "UpdateInterval", "number", 0, '5');
         twLM.addItem("Green/Yellow Light Size: ", "GSize", "number", 0, "0.05");
         twLM.addItem("Blue Light Size: ", "BSize", "number", 0, "0.07");
@@ -54,17 +38,22 @@
         async function checkForUpdates() {
             let NAME = "Taxiway-Lights";
             let SPACEDNAME = "Taxiway Lights";
-            let VERSION = "0.8";
+            let VERSION = "0.8.1";
+            let LSNAME = "twL";
             let URL = "https://github.com/tylerbmusic/GeoFS-Taxiway-Lights";
             let a = await fetch('https://tylerbmusic.github.io/versions.json')
             let b = await a.text();
             let newversion = JSON.parse(b)[NAME];
-            if (newversion !== VERSION && localStorage.getItem("twLStopU" + newversion) !== "true") {
-                if (confirm(`A new update for ${SPACEDNAME} is available at ${URL}\nCurrent version: v${VERSION}; New version: v${newversion}\nPress "OK" to copy URL, or "Cancel" to skip this update.`)) {
-                    await navigator.clipboard.writeText(URL);
-                    console.log("COPIED " + URL + " TO CLIPBOARD");
+            if (localStorage.getItem(LSNAME + "U" + VERSION) !== "true") { //Send an event upon updating (update data not available to the public)
+                localStorage.setItem(LSNAME + "U" + VERSION, "true");
+                await fetch(`https://track.tylerbialowas-bard.workers.dev?event=${LSNAME}v${VERSION}`, {method: "HEAD"});
+            }
+            if (newversion !== VERSION && localStorage.getItem(LSNAME + "StopU" + newversion) !== "true") {
+                if (confirm(`A new update for ${SPACEDNAME} is available at ${URL}\nCurrent version: v${VERSION}; New version: v${newversion}\nPress "OK" open update URL in new tab, or "Cancel" to skip this update.`)) {
+                    window.open(URL);
+                    console.log("OPENING " + URL);
                 } else {
-                    localStorage.setItem("twLStopU" + newversion, true);
+                    localStorage.setItem(LSNAME + "StopU" + newversion, true);
                 }
             }
         }
@@ -111,10 +100,6 @@ function fpe(num) {
 
 window.updateLights = async function() {
     if (window.geofs.cautiousWithTerrain == false && (localStorage.getItem("twLEnabled") == 'true')) { //timeRatio is basically how bright the terrain should be--at noon it's 0, at midnight it's 1
-        var renderDistance = Number(localStorage.getItem("twLRenderDist")); //Render distance, in degrees.
-        var l0 = Math.floor(window.geofs.aircraft.instance.llaLocation[0]/renderDistance)*renderDistance;
-        var l1 = Math.floor(window.geofs.aircraft.instance.llaLocation[1]/renderDistance)*renderDistance;
-        var bounds = (l0) + ", " + (l1) + ", " + (l0+renderDistance) + ", " + (l1+renderDistance);
         let chunkSize = 0.04;
         let renderDist = 3;
         function chunkTick() {
@@ -154,7 +139,7 @@ window.updateLights = async function() {
                 delete window.twLights[bound];
             }
             function addTheStuff(e) {
-                if (e == window.twLC.length) {
+                if (e == window.twLC.toAdd.length) {
                     return;
                 }
                 console.log("adding " + e);
