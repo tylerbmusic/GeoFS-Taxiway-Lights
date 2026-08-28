@@ -24,6 +24,7 @@
     };
     window.taxiwayList = [];
     window.taxiwaysReady = false;
+    window.twRemoverInit = false;
 
     // Web Worker for optimized taxiway calculations
     const workerCode = `
@@ -396,15 +397,6 @@
             twLM.set("GSize", 0.5);
             twLM.set("BSize", 0.5);
         }
-        //Make the lights only visible at night, unless the setting is turned off
-        let f = () => {
-            for (let c in window.twLights) {
-                for (let l in window.twLights[c]) {
-                    window.twLights[c][l].show = (window.geofs.isNight || !twLM.get("NightOnly"));
-                }
-            }
-        }
-        window.$("body").on("nightChange", f); //jQuery thing taken from geofs.js
         //Update notification
         async function checkForUpdates() {
             let NAME = "Taxiway-Lights";
@@ -492,6 +484,19 @@
                 window.geofs.airports.simple3DTileProvider = null;
                 window.geofs.airports.taxiwayLightBillboardOptions.distanceDisplayCondition.far = 1E-5;
             }
+            //Make the lights only visible at night, unless the setting is turned off
+            if (window.$ && !window.twRemoverInit) {
+                window.twRemoverInit = true;
+                let f = () => {
+                    for (let c in window.twLights) {
+                        for (let l in window.twLights[c]) {
+                            window.twLights[c][l].show = (window.geofs.isNight || !twLM.get("NightOnly"));
+                        }
+                    }
+                }
+                window.$("body").on("nightChange", f); //jQuery thing taken from geofs.js
+            }
+
             let chunkSize = 0.02;
             let renderDist = 4;
             function chunkTick() {
